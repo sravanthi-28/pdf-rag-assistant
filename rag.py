@@ -1,5 +1,5 @@
 """
-rag.py - core logic for the PDF question-answering assistant.
+rag.py - core logic for the PDF question-answering assistant (Ollama only).
 """
 import os
 
@@ -14,13 +14,12 @@ load_dotenv()
 
 # ---------------------------------------------------------------- settings
 EMBED_MODEL = "nomic-embed-text"
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "claude")    # "claude" or "ollama"
-CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-5-5")
 OLLAMA_CHAT_MODEL = os.getenv("OLLAMA_CHAT_MODEL", "llama3.2:3b")
 
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 150
 TOP_K = 3
+
 SYSTEM_PROMPT = (
     "You answer questions using ONLY the provided context from a document. "
     "If the context contains information relevant to the question, use it to answer, "
@@ -102,24 +101,10 @@ def _build_user_message(question, retrieved):
         f"Excerpt {n}:\n{c['text']}" for n, c in enumerate(retrieved, start=1)
     )
     return f"Context:\n{context}\n\nQuestion: {question}"
-def _answer_claude(user_message):
-    import anthropic
-
-    key = os.getenv("ANTHROPIC_API_KEY")
-    if not key:
-        raise RuntimeError("ANTHROPIC_API_KEY not found. Add it to the .env file.")
-    client = anthropic.Anthropic(api_key=key)
-    msg = client.messages.create(
-        model=CLAUDE_MODEL,
-        max_tokens=800,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_message}],
-    )
-    return msg.content[0].text
 
 
-def _answer_ollama(user_message):
-    resp = ollama.chat(
+def _chat_kwargs(user_message):
+    return dict(
         model=OLLAMA_CHAT_MODEL,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -128,31 +113,21 @@ def _answer_ollama(user_message):
         options={"temperature": 0.1, "num_ctx": 2048, "num_predict": 300},
         keep_alive="30m",
     )
+
+
 def answer(question, retrieved):
+    """Returns the full answer text (used by the terminal test)."""
     user_message = _build_user_message(question, retrieved)
-    if LLM_PROVIDER == "ollama":
-        return _answer_ollama(user_message)
-    return _answer_claude(user_message)
+    resp = ollama.chat(**_chat_kwargs(user_message))
+    return resp["message"]["content"]
 
 
 def answer_stream(question, retrieved):
     """Yields the answer piece by piece (used by the Streamlit app)."""
     user_message = _build_user_message(question, retrieved)
-    if LLM_PROVIDER == "ollama":
-        stream = ollama.chat(
-            model=OLLAMA_CHAT_MODEL,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_message},
-            ],
-            options={"temperature": 0.1, "num_ctx": 2048, "num_predict": 300},
-            keep_alive="30m",
-            stream=True,
-        )
-        for part in stream:
-            yield part["message"]["content"]
-    else:
-        yield _answer_claude(user_message)
+    for part in ollama.chat(**_chat_kwargs(user_message), stream=True):
+        yield part["message"]["content"]
+
 
 # ------------------------------------------- quick test: python rag.py file.pdf
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ st.set_page_config(page_title="PDF Q&A Assistant", page_icon="📄")
 st.title("📄 PDF Question-Answering Assistant")
 st.caption(
     f"Embeddings: Ollama ({rag.EMBED_MODEL}) · Vector store: FAISS · "
-    f"LLM: {rag.CLAUDE_MODEL if rag.LLM_PROVIDER == 'claude' else rag.OLLAMA_CHAT_MODEL}"
+    f"LLM: Ollama ({rag.OLLAMA_CHAT_MODEL})"
 )
 
 
