@@ -1,0 +1,7 @@
+streamlit
+pypdf
+faiss-cpu
+langchain-text-splitters
+ollama
+anthropic
+python-dotenv
