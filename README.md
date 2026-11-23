@@ -21,7 +21,7 @@ Question → embedding → top-3 chunks from FAISS → LLM (Ollama, llama3.2:3b)
 |---|---|
 | Interface | Streamlit |
 | PDF text extraction | pypdf |
-| Chunking | LangChain `RecursiveCharacterTextSplitter` (800 characters, 150 overlap) |
+| Chunking | LangChain `RecursiveCharacterTextSplitter` (500 characters, 80 overlap) |
 | Embeddings | Ollama, `nomic-embed-text` |
 | Vector store | FAISS (`IndexFlatIP`, cosine similarity) |
 | Answer LLM | Ollama, `llama3.2:3b` |
