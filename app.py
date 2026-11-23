@@ -17,7 +17,13 @@ st.caption(
     f"Embeddings: Ollama ({rag.EMBED_MODEL}) · Vector store: FAISS · "
     f"LLM: Ollama ({rag.OLLAMA_CHAT_MODEL})"
 )
+@st.cache_resource(show_spinner=False)
+def _warm_up():
+    rag.warm_up()
+    return True
 
+
+_warm_up()
 
 def show_sources(sources):
     st.subheader("Sources")

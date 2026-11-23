@@ -16,8 +16,8 @@ load_dotenv()
 EMBED_MODEL = "nomic-embed-text"
 OLLAMA_CHAT_MODEL = os.getenv("OLLAMA_CHAT_MODEL", "llama3.2:3b")
 
-CHUNK_SIZE = 800
-CHUNK_OVERLAP = 150
+CHUNK_SIZE = 500
+CHUNK_OVERLAP = 80
 TOP_K = 3
 
 SYSTEM_PROMPT = (
@@ -29,7 +29,7 @@ SYSTEM_PROMPT = (
     "Do not use outside knowledge. "
     "Do not mention page numbers, excerpts, or file names; "
     "the app shows the sources separately. "
-    "Be concise."
+    "Answer in at most 4 short sentences."
 )
 
 splitter = RecursiveCharacterTextSplitter(
@@ -110,7 +110,7 @@ def _chat_kwargs(user_message):
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
         ],
-        options={"temperature": 0.1, "num_ctx": 2048, "num_predict": 300},
+        options={"temperature": 0.1, "num_ctx": 1536, "num_predict": 150},
         keep_alive="30m",
     )
 
@@ -128,7 +128,18 @@ def answer_stream(question, retrieved):
     for part in ollama.chat(**_chat_kwargs(user_message), stream=True):
         yield part["message"]["content"]
 
-
+def warm_up():
+    """Loads the chat and embedding models into memory so the first question is fast."""
+    try:
+        ollama.chat(
+            model=OLLAMA_CHAT_MODEL,
+            messages=[{"role": "user", "content": "hi"}],
+            options={"num_predict": 1},
+            keep_alive="30m",
+        )
+        ollama.embed(model=EMBED_MODEL, input=["warm up"], keep_alive="30m")
+    except Exception:
+        pass
 # ------------------------------------------- quick test: python rag.py file.pdf
 if __name__ == "__main__":
     import sys
