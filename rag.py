@@ -29,7 +29,7 @@ SYSTEM_PROMPT = (
     "Do not use outside knowledge. "
     "Do not mention page numbers, excerpts, or file names; "
     "the app shows the sources separately. "
-    "Answer in at most 4 short sentences."
+    "Answer in at most 2 short sentences."
 )
 
 splitter = RecursiveCharacterTextSplitter(
@@ -69,7 +69,7 @@ def embed(texts, prefix=""):
     out = []
     for i in range(0, len(texts), 32):
         batch = [prefix + t for t in texts[i:i + 32]]
-        resp = ollama.embed(model=EMBED_MODEL, input=batch)
+        resp = ollama.embed(model=EMBED_MODEL, input=batch, keep_alive="30m")
         out.extend(resp["embeddings"])
     vecs = np.array(out, dtype="float32")
     faiss.normalize_L2(vecs)
@@ -110,7 +110,7 @@ def _chat_kwargs(user_message):
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_message},
         ],
-        options={"temperature": 0.1, "num_ctx": 1536, "num_predict": 150},
+        options={"temperature": 0.1, "num_ctx": 1536, "num_predict": 80},
         keep_alive="30m",
     )
 
@@ -131,12 +131,9 @@ def answer_stream(question, retrieved):
 def warm_up():
     """Loads the chat and embedding models into memory so the first question is fast."""
     try:
-        ollama.chat(
-            model=OLLAMA_CHAT_MODEL,
-            messages=[{"role": "user", "content": "hi"}],
-            options={"num_predict": 1},
-            keep_alive="30m",
-        )
+        kwargs = _chat_kwargs("hi")
+        kwargs["options"] = {**kwargs["options"], "num_predict": 1}
+        ollama.chat(**kwargs)
         ollama.embed(model=EMBED_MODEL, input=["warm up"], keep_alive="30m")
     except Exception:
         pass
